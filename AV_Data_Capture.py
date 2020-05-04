@@ -28,6 +28,7 @@ def argparse_function() -> [str, str, bool]:
     parser.add_argument("file", default='', nargs='?', help="Single Movie file path.")
     parser.add_argument("-c", "--config", default='config.ini', nargs='?', help="The config file Path.")
     parser.add_argument("-a", "--auto-exit", dest='autoexit', action="store_true", help="Auto exit after program complete")
+    parser.add_argument("-r", "--recursive", dest="recursive", action = "store_true", help = "Scan all sub-folders")
     args = parser.parse_args()
 
     return args.file, args.config, args.autoexit
