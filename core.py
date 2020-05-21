@@ -92,7 +92,7 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
     title = json_data['title']
     actor_list = json_data['actor']  # 字符串转列表
     if type(actor_list) == type(''):
-        actor_list = [actor_list]
+        actor_list = actor_list.split(',')
     release = json_data['release']
     number = json_data['number']
     studio = json_data['studio']
@@ -107,6 +107,8 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
         cover_small = ''
     imagecut = json_data['imagecut']
     tag = json_data['tag']  # 字符串转列表 @
+    if type(actor_list) == type(''):
+        tag = tag.split(',')
     actor = ', '.join(actor_list) 
 
     if title == '' or number == '':
