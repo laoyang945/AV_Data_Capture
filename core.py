@@ -63,16 +63,16 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
 
     # if the input file name matches certain rules,
     # move some web service to the beginning of the list
-    if re.match(r"^\d{5,}", file_number) or (
-        "HEYZO" in file_number or "heyzo" in file_number or "Heyzo" in file_number
-    ):
-        sources.insert(0, sources.pop(sources.index("avsox")))
-    elif re.match(r"\d+\D+", file_number) or (
-        "siro" in file_number or "SIRO" in file_number or "Siro" in file_number
-    ):
-        sources.insert(0, sources.pop(sources.index("fanza")))
-    elif "fc2" in file_number or "FC2" in file_number:
-        sources.insert(0, sources.pop(sources.index("fc2")))
+    # if re.match(r"^\d{5,}", file_number) or (
+    #    "HEYZO" in file_number or "heyzo" in file_number or "Heyzo" in file_number
+    #):
+    #    sources.insert(0, sources.pop(sources.index("avsox")))
+    #elif re.match(r"\d+\D+", file_number) or (
+    #    "siro" in file_number or "SIRO" in file_number or "Siro" in file_number
+    #):
+    #    sources.insert(0, sources.pop(sources.index("mgstage")))
+    #elif "fc2" in file_number or "FC2" in file_number:
+    #    sources.insert(0, sources.pop(sources.index("fc2")))
 
     json_data = {}
     for source in sources:
@@ -86,11 +86,13 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
         print('[-]Movie Data not found!')
         moveFailedFolder(filepath, conf.failed_folder())
         return
-
+    
     # ================================================网站规则添加结束================================================
 
     title = json_data['title']
-    actor_list = str(json_data['actor']).strip("[ ]").replace("'", '').split(',')  # 字符串转列表
+    actor_list = json_data['actor']  # 字符串转列表
+    if type(actor_list) == type(''):
+        actor_list = [actor_list]
     release = json_data['release']
     number = json_data['number']
     studio = json_data['studio']
@@ -104,8 +106,8 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
     except:
         cover_small = ''
     imagecut = json_data['imagecut']
-    tag = str(json_data['tag']).strip("[ ]").replace("'", '').replace(" ", '').split(',')  # 字符串转列表 @
-    actor = str(actor_list).strip("[ ]").replace("'", '').replace(" ", '')
+    tag = json_data['tag']  # 字符串转列表 @
+    actor = ', '.join(actor_list) 
 
     if title == '' or number == '':
         print('[-]Movie Data not found!')
@@ -134,12 +136,15 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
     location_rule = eval(conf.location_rule())
 
     # Process only Windows.
-    if platform.system() == "Windows":
-        if 'actor' in conf.location_rule() and len(actor) > 100:
-            print(conf.location_rule())
-            location_rule = eval(conf.location_rule().replace("actor","'多人作品'"))
-        if 'title' in conf.location_rule() and len(title) > 100:
-            location_rule = eval(conf.location_rule().replace("title",'number'))
+    #if platform.system() == "Windows":
+    if 'actor' in conf.location_rule() and len(actor) > 50:
+        print(conf.location_rule())
+        location_rule = eval(conf.location_rule().replace("actor","'多人作品'"))
+    if 'actor' in conf.location_rule() and len(actor) == 0:
+        print(conf.location_rule())
+        location_rule = eval(conf.location_rule().replace("actor","'素人'"))
+    if 'title' in conf.location_rule() and len(title) > 50:
+        location_rule = eval(conf.location_rule().replace("title",'number'))
 
     # 返回处理后的json_data
     json_data['title'] = title
@@ -268,7 +273,7 @@ def print_files(path, c_word, naming_rule, part, cn_sub, json_data, filepath, fa
     try:
         if not os.path.exists(path):
             os.makedirs(path)
-        with open(path + "/" + number + part + c_word + ".nfo", "wt", encoding='UTF-8') as code:
+        with open(path + "/" + number + c_word + ".nfo", "wt", encoding='UTF-8') as code:
             print('<?xml version="1.0" encoding="UTF-8" ?>', file=code)
             print("<movie>", file=code)
             print(" <title>" + naming_rule + "</title>", file=code)
@@ -314,7 +319,7 @@ def print_files(path, c_word, naming_rule, part, cn_sub, json_data, filepath, fa
             print("  <cover>" + cover + "</cover>", file=code)
             print("  <website>" + website + "</website>", file=code)
             print("</movie>", file=code)
-            print("[+]Wrote!            " + path + "/" + number + part + c_word + ".nfo")
+            print("[+]Wrote!            " + path + "/" + number + c_word + ".nfo")
     except IOError as e:
         print("[-]Write Failed!")
         print(e)
@@ -401,10 +406,8 @@ def paste_file_to_folder_mode2(filepath, path, multi_part, number, part, c_word,
 
 def get_part(filepath, failed_folder):
     try:
-        if re.search('-CD\d+', filepath):
-            return re.findall('-CD\d+', filepath)[0]
-        if re.search('-cd\d+', filepath):
-            return re.findall('-cd\d+', filepath)[0]
+        if re.search(r'-CD\d+|-PART\d+', filepath, re.I):
+            return re.findall(r'-CD\d+|-PART\d+', filepath, re.I)[0]
     except:
         print("[-]failed!Please rename the filename again!")
         moveFailedFolder(filepath, failed_folder)
@@ -452,10 +455,10 @@ def core_main(file_path, number_th, conf: config.Config):
     imagecut = json_data['imagecut']
     tag = json_data['tag']
     # =======================================================================判断-C,-CD后缀
-    if '-CD' in filepath or '-cd' in filepath:
+    if re.search(r'-CD|-PART', filepath, re.I):
         multi_part = 1
         part = get_part(filepath, conf.failed_folder())
-    if '-c.' in filepath or '-C.' in filepath or '中文' in filepath or '字幕' in filepath:
+    if re.search(r'c\.|中文|字幕', filepath, re.I):
         cn_sub = '1'
         c_word = '-C'  # 中文字幕影片后缀
     if '流出' in filepath:
@@ -475,8 +478,6 @@ def core_main(file_path, number_th, conf: config.Config):
     #  1: 刮削模式 / Scraping mode
     #  2: 整理模式 / Organizing mode
     if conf.main_mode() == 1:
-        if multi_part == 1:
-            number += part  # 这时number会被附加上CD1后缀
 
         # 检查小封面
         if imagecut == 3:
@@ -491,8 +492,12 @@ def core_main(file_path, number_th, conf: config.Config):
         # 打印文件
         print_files(path, c_word, json_data['naming_rule'], part, cn_sub, json_data, filepath, conf.failed_folder(), tag, json_data['actor_list'], liuchu)
 
+        if multi_part == 1:
+            number += part  # 这时number会被附加上CD1后缀
+
         # 移动文件
         paste_file_to_folder(filepath, path, number, c_word, conf)
+
     elif conf.main_mode() == 2:
         # 移动文件
         paste_file_to_folder_mode2(filepath, path, multi_part, number, part, c_word, conf)

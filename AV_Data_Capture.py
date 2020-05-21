@@ -25,13 +25,12 @@ def check_update(local_version):
 
 def argparse_function() -> [str, str, bool]:
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", default='', nargs='?', help="Single Movie file path.")
+    parser.add_argument("path", default='.', nargs='?', help="Movie file path.")
     parser.add_argument("-c", "--config", default='config.ini', nargs='?', help="The config file Path.")
     parser.add_argument("-a", "--auto-exit", dest='autoexit', action="store_true", help="Auto exit after program complete")
-    parser.add_argument("-r", "--recursive", dest="recursive", action = "store_true", help = "Scan all sub-folders")
     args = parser.parse_args()
 
-    return args.file, args.config, args.autoexit
+    return args.path, args.config, args.autoexit
 
 def movie_lists(root, escape_folder):
     for folder in escape_folder:
@@ -45,7 +44,8 @@ def movie_lists(root, escape_folder):
         if os.path.isdir(f):
             total += movie_lists(f, escape_folder)
         elif os.path.splitext(f)[1] in file_type:
-            total.append(f)
+            if not re.search(r'UU|APP|papapa|女', f, re.IGNORECASE):
+                total.append(f)
     return total
 
 
@@ -86,7 +86,7 @@ def create_data_and_move(file_path: str, c: config.Config):
         else:
             try:
                 print("[-]Move [{}] to failed folder".format(file_path))
-                shutil.move(file_path, str(os.getcwd()) + "/" + conf.failed_folder() + "/")
+                shutil.move(file_path, conf.failed_folder())
             except Exception as err:
                 print('[!]', err)
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     version = '3.4'
 
     # Parse command line args
-    single_file_path, config_file, auto_exit = argparse_function()
+    download_path, config_file, auto_exit = argparse_function()
 
     # Read config.ini
     conf = config.Config(path=config_file)
@@ -109,32 +109,25 @@ if __name__ == '__main__':
         check_update(version)
 
     create_failed_folder(conf.failed_folder())
-    os.chdir(os.getcwd())
-    movie_list = movie_lists(".", re.split("[,，]", conf.escape_folder()))
+    movie_list = movie_lists(download_path, re.split("[,，]", conf.escape_folder()))
 
-    # ========== 野鸡番号拖动 ==========
-    if not single_file_path == '':
-        create_data_and_move(single_file_path, conf)
-        CEF(conf.success_folder())
-        CEF(conf.failed_folder())
-        print("[+]All finished!!!")
-        input("[+][+]Press enter key exit, you can check the error messge before you exit.")
-        exit()
-    # ========== 野鸡番号拖动 ==========
-
+    #    CEF(conf.success_folder())
+    #    CEF(conf.failed_folder())
     count = 0
     count_all = str(len(movie_list))
+    print('processing ', download_path)
     print('[+]Find', count_all, 'movies')
     if conf.soft_link():
         print('[!] --- Soft link mode is ENABLE! ----')
     for movie_path in movie_list:  # 遍历电影列表 交给core处理
+        print('movie path: ', movie_path)
         count = count + 1
         percentage = str(count / int(count_all) * 100)[:4] + '%'
         print('[!] - ' + percentage + ' [' + str(count) + '/' + count_all + '] -')
         create_data_and_move(movie_path, conf)
 
-    CEF(conf.success_folder())
-    CEF(conf.failed_folder())
+    #CEF(conf.success_folder())
+    #CEF(conf.failed_folder())
     print("[+]All finished!!!")
     if auto_exit:
         exit(0)
