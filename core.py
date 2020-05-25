@@ -86,7 +86,7 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
         print('[-]Movie Data not found!')
         moveFailedFolder(filepath, conf.failed_folder())
         return
-    
+
     # ================================================网站规则添加结束================================================
 
     title = json_data['title']
@@ -107,13 +107,15 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
         cover_small = ''
     imagecut = json_data['imagecut']
     tag = json_data['tag']  # 字符串转列表 @
-    if type(actor_list) == type(''):
+    if type(tag) == type(''):
         tag = tag.split(',')
+    if conf.extra_tag() != '':
+        tag.append(conf.extra_tag())
     actor = ', '.join(actor_list) 
 
     if title == '' or number == '':
-        print('[-]Movie Data not found!')
-        moveFailedFolder(filepath, conf.failed_folder())
+        print('[-] Movie Data not found!')
+        #moveFailedFolder(filepath, conf.failed_folder())
         return
 
     # if imagecut == '3':
@@ -158,6 +160,8 @@ def get_data_from_json(file_number, filepath, conf: config.Config):  # 从JSON�
     json_data['location_rule'] = location_rule
     json_data['year'] = year
     json_data['actor_list'] = actor_list
+    json_data['actor_photo'] = {} if type(json_data['actor_photo']) == type('') else json_data['actor_photo']
+
     return json_data
 
 
@@ -245,33 +249,32 @@ def download_file_with_filename(url, filename, path, conf: config.Config, filepa
             i += 1
             print('[-]Image Download :  Connect retry ' + str(i) + '/' + str(retry_count))
     print('[-]Connect Failed! Please check your Proxy or Network!')
-    moveFailedFolder(filepath, failed_folder)
+    #moveFailedFolder(filepath, failed_folder)
     return
 
 
 # 封面是否下载成功，否则移动到failed
 def image_download(cover, number, c_word, path, conf: config.Config, filepath, failed_folder):
-    if download_file_with_filename(cover, number + c_word + '-fanart.jpg', path, conf, filepath, failed_folder) == 'failed':
-        moveFailedFolder(filepath, failed_folder)
-        return
-
-    _proxy, _timeout, retry = conf.proxy()
-    for i in range(retry):
-        if os.path.getsize(path + '/' + number + c_word + '-fanart.jpg') == 0:
-            print('[!]Image Download Failed! Trying again. [{}/3]', i + 1)
-            download_file_with_filename(cover, number + c_word + '-fanart.jpg', path, conf, filepath, failed_folder)
-            continue
-        else:
-            break
-    if os.path.getsize(path + '/' + number + c_word + '-fanart.jpg') == 0:
-        return
-    print('[+]Image Downloaded!', path + '/' + number + c_word + '-fanart.jpg')
-    shutil.copyfile(path + '/' + number + c_word + '-fanart.jpg',path + '/' + number + c_word + '-thumb.jpg')
+    if not os.path.exists(path + '/' + number + c_word + '-fanart.jpg'):
+        download_file_with_filename(cover, number + c_word + '-fanart.jpg', path, conf, filepath, failed_folder)      
+        print('[+] Image Downloaded!', path + '/' + number + c_word + '-fanart.jpg')
+        shutil.copyfile(path + '/' + number + c_word + '-fanart.jpg',path + '/' + number + c_word + '-thumb.jpg')
+    else:
+        print('[+] Image exists, skipped downloading')
 
 
 def print_files(path, c_word, naming_rule, part, cn_sub, json_data, filepath, failed_folder, tag, actor_list, liuchu):
+
     title, studio, year, outline, runtime, director, actor_photo, release, number, cover, website = get_info(json_data)
 
+    if os.path.exists(path + "/" + number + c_word + ".nfo"):
+        print("[+] Wrote Skipped")
+        return
+
+    #if cn_sub == '1':
+    #    tag.append('中文字幕')
+    if liuchu == '流出':
+        tag.append('流出')
     try:
         if not os.path.exists(path):
             os.makedirs(path)
@@ -290,51 +293,42 @@ def print_files(path, c_word, naming_rule, part, cn_sub, json_data, filepath, fa
             print("  <poster>" + number + c_word + "-poster.jpg</poster>", file=code)
             print("  <thumb>" + number + c_word + "-thumb.jpg</thumb>", file=code)
             print("  <fanart>" + number + c_word + '-fanart.jpg' + "</fanart>", file=code)
-            try:
-                for key in actor_list:
-                    print("  <actor>", file=code)
-                    print("   <name>" + key + "</name>", file=code)
-                    print("  </actor>", file=code)
-            except:
-                aaaa = ''
+
+            for actor in actor_list:
+                print("  <actor>", file=code)
+                print("   <name>" + actor + "</name>", file=code)
+                print("   <thumb>" + json_data.get('actor_photo', {}).get(actor,'') + "</thumb>", file = code)
+                print("  </actor>", file=code)
+
             print("  <maker>" + studio + "</maker>", file=code)
             print("  <label>", file=code)
             print("  </label>", file=code)
-            if cn_sub == '1':
-                print("  <tag>中文字幕</tag>", file=code)
-            if liuchu == '流出':
-                print("  <tag>流出</tag>", file=code)
-            try:
-                for i in tag:
-                    print("  <tag>" + i + "</tag>", file=code)
-            except:
-                aaaaa = ''
-            try:
-                for i in tag:
-                    print("  <genre>" + i + "</genre>", file=code)
-            except:
-                aaaaaaaa = ''
-            if cn_sub == '1':
-                print("  <genre>中文字幕</genre>", file=code)
+
+            for i in set(tag):
+                print("  <tag>" + i + "</tag>", file=code)
+                print("  <genre>" + i + "</genre>", file=code)
+
             print("  <num>" + number + "</num>", file=code)
             print("  <premiered>" + release + "</premiered>", file=code)
             print("  <cover>" + cover + "</cover>", file=code)
             print("  <website>" + website + "</website>", file=code)
             print("</movie>", file=code)
-            print("[+]Wrote!            " + path + "/" + number + c_word + ".nfo")
+            print("[+] Wrote!            " + path + "/" + number + c_word + ".nfo")
+
     except IOError as e:
-        print("[-]Write Failed!")
+        print("[-] Write Failed!")
         print(e)
-        moveFailedFolder(filepath, failed_folder)
+        #moveFailedFolder(filepath, failed_folder)
         return
     except Exception as e1:
         print(e1)
         print("[-]Write Failed!")
-        moveFailedFolder(filepath, failed_folder)
+        #moveFailedFolder(filepath, failed_folder)
         return
 
-
 def cutImage(imagecut, path, number, c_word):
+    if os.path.exists(path + '/' + number + c_word + '-poster.jpg'):
+        return
     if imagecut == 1:
         try:
             img = Image.open(path + '/' + number + c_word + '-fanart.jpg')
@@ -343,16 +337,16 @@ def cutImage(imagecut, path, number, c_word):
             h = img.height
             img2 = img.crop((w / 1.9, 0, w, h))
             img2.save(path + '/' + number + c_word + '-poster.jpg')
-            print('[+]Image Cutted!     ' + path + '/' + number + c_word + '-poster.jpg')
+            print('[+] Image Cut!     ' + path + '/' + number + c_word + '-poster.jpg')
         except:
-            print('[-]Cover cut failed!')
+            print('[-] Cover cut failed!')
     elif imagecut == 0:
         shutil.copyfile(path + '/' + number + c_word + '-fanart.jpg',path + '/' + number + c_word + '-poster.jpg')
         print('[+]Image Copyed!     ' + path + '/' + number + c_word + '-poster.jpg')
 
 
 def paste_file_to_folder(filepath, path, number, c_word, conf: config.Config):  # 文件路径，番号，后缀，要移动至的位置
-    houzhui = str(re.search('[.](AVI|RMVB|WMV|MOV|MP4|MKV|FLV|TS|WEBM|avi|rmvb|wmv|mov|mp4|mkv|flv|ts|webm)$', filepath).group())
+    houzhui = str(re.search('[.](AVI|RMVB|WMV|MOV|MP4|MKV|FLV|TS|WEBM|MPG|DIVX)$', filepath, re.I).group())
 
     try:
         # 如果soft_link=1 使用软链接
@@ -407,12 +401,20 @@ def paste_file_to_folder_mode2(filepath, path, multi_part, number, part, c_word,
         return
 
 def get_part(filepath, failed_folder):
+    letter_dict = {"A":"-part1", "B":"-part2", "C":"-part3", "D":"-part4"}
+    res = '-part1'
     try:
         if re.search(r'-CD\d+|-PART\d+', filepath, re.I):
             return re.findall(r'-CD\d+|-PART\d+', filepath, re.I)[0]
-    except:
+        else:
+            file_name, ext = os.path.splitext(filepath)
+            print(file_name)
+            if re.search(r'[ABCD]$', file_name, re.I):
+                return letter_dict[file_name[-1].upper()]
+    except Exception as e0:
+        print(e0)
         print("[-]failed!Please rename the filename again!")
-        moveFailedFolder(filepath, failed_folder)
+        #moveFailedFolder(filepath, failed_folder)
         return
 
 
@@ -455,12 +457,13 @@ def core_main(file_path, number_th, conf: config.Config):
         # so the solution is: use the normalized search id
         number = json_data["number"]
     imagecut = json_data['imagecut']
+
     tag = json_data['tag']
     # =======================================================================判断-C,-CD后缀
-    if re.search(r'-CD|-PART', filepath, re.I):
+    if re.search(r'-CD|-PART|A\.|B\.', filepath, re.I):
         multi_part = 1
         part = get_part(filepath, conf.failed_folder())
-    if re.search(r'c\.|中文|字幕', filepath, re.I):
+    if re.search(r'-C\.|中文|字幕', filepath, re.I):
         cn_sub = '1'
         c_word = '-C'  # 中文字幕影片后缀
     if '流出' in filepath:

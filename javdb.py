@@ -10,7 +10,8 @@ from ADC_function import *
 def getTitle(a):
     html = etree.fromstring(a, etree.HTMLParser())
     result = html.xpath("/html/body/section/div/h2/strong/text()")[0]
-    return result
+    nSpace = result.find(' ')
+    return result[ nSpace + 1 : ]
 def getActor(a):  # //*[@id="center_column"]/div[2]/div[1]/div/table/tbody/tr[1]/td/text()
     html = etree.fromstring(a, etree.HTMLParser())  # //table/tr[1]/td[1]/text()
     result1 = str(html.xpath('//strong[contains(text(),"演員")]/../following-sibling::span/text()')).strip(" ['']")

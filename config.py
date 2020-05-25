@@ -10,6 +10,12 @@ class Config:
         else:
             print("[-] Config file not found! Use the default settings")
             self.conf = self._default_config()
+    
+    def extra_tag(self) -> str:
+        return self.conf.get("common", "extra_tag")
+
+    def movie_path(self) -> str:
+        return self.conf.get("common", "movie_path")
 
     def main_mode(self) -> str:
         try:
@@ -112,6 +118,8 @@ class Config:
 if __name__ == "__main__":
     config = Config()
     print(config.main_mode())
+    print(config.extra_tag())
+    print(config.movie_path())
     print(config.failed_folder())
     print(config.success_folder())
     print(config.soft_link())

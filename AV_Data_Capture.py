@@ -23,28 +23,28 @@ def check_update(local_version):
         print("[*]======================================================")
 
 
-def argparse_function() -> [str, str, bool]:
+def argparse_function() -> [str, bool]:
     parser = argparse.ArgumentParser()
-    parser.add_argument("path", default='.', nargs='?', help="Movie file path.")
+    #parser.add_argument("path", default='.', nargs='?', help="Movie file path.")
     parser.add_argument("-c", "--config", default='config.ini', nargs='?', help="The config file Path.")
     parser.add_argument("-a", "--auto-exit", dest='autoexit', action="store_true", help="Auto exit after program complete")
     args = parser.parse_args()
 
-    return args.path, args.config, args.autoexit
+    return args.config, args.autoexit
 
 def movie_lists(root, escape_folder):
     for folder in escape_folder:
         if folder in root:
             return []
     total = []
-    file_type = ['.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.MP4', '.AVI', '.RMVB', '.WMV','.MOV', '.MKV', '.FLV', '.TS', '.WEBM', ]
+    file_type_re = re.compile('\.(mp4|avi|mpg|divx|rmvb|wmv|mov|mkv|flv|ts|webm)$', re.I)
     dirs = os.listdir(root)
     for entry in dirs:
         f = os.path.join(root, entry)
         if os.path.isdir(f):
             total += movie_lists(f, escape_folder)
-        elif os.path.splitext(f)[1] in file_type:
-            if not re.search(r'UU|APP|papapa|女', f, re.IGNORECASE):
+        elif file_type_re.search(os.path.splitext(f)[1]):
+            if not re.search(r'UU|APP|papapa', f, re.I):
                 total.append(f)
     return total
 
@@ -85,8 +85,9 @@ def create_data_and_move(file_path: str, c: config.Config):
             os.symlink(file_path, str(os.getcwd()) + "/" + conf.failed_folder() + "/")
         else:
             try:
-                print("[-]Move [{}] to failed folder".format(file_path))
-                shutil.move(file_path, conf.failed_folder())
+                abc = ''
+                # print("[-]Move [{}] to failed folder".format(file_path))
+                # shutil.move(file_path, conf.failed_folder())
             except Exception as err:
                 print('[!]', err)
 
@@ -95,7 +96,7 @@ if __name__ == '__main__':
     version = '3.4'
 
     # Parse command line args
-    download_path, config_file, auto_exit = argparse_function()
+    config_file, auto_exit = argparse_function()
 
     # Read config.ini
     conf = config.Config(path=config_file)
@@ -105,10 +106,11 @@ if __name__ == '__main__':
     print('[*]' + version_print.center(54))
     print('[*]======================================================')
 
-    if conf.update_check():
-        check_update(version)
+    #if conf.update_check():
+    #    check_update(version)
 
     create_failed_folder(conf.failed_folder())
+    download_path = '.' if conf.movie_path() == '' else conf.movie_path()
     movie_list = movie_lists(download_path, re.split("[,，]", conf.escape_folder()))
 
     #    CEF(conf.success_folder())
@@ -120,7 +122,7 @@ if __name__ == '__main__':
     if conf.soft_link():
         print('[!] --- Soft link mode is ENABLE! ----')
     for movie_path in movie_list:  # 遍历电影列表 交给core处理
-        print('movie path: ', movie_path)
+        print('[!] --- processing: ' + movie_path)
         count = count + 1
         percentage = str(count / int(count_all) * 100)[:4] + '%'
         print('[!] - ' + percentage + ' [' + str(count) + '/' + count_all + '] -')

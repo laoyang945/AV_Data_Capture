@@ -122,6 +122,8 @@ def main(number):
     try:
         try:
             htmlcode = get_html('https://www.javbus.com/' + number)
+            if getTitle(htmlcode) == '':
+                raise Exception('direct link is invalid')
             try:
                 dww_htmlcode = fanza.main_htmlcode(getCID(htmlcode))
             except:
@@ -147,8 +149,23 @@ def main(number):
             js = json.dumps(dic, ensure_ascii=False, sort_keys=True, indent=4,
                             separators=(',', ':'), )  # .encode('UTF-8')
             return js
-        except:
-            return main_uncensored(number)
+        except Exception as e1:
+            print (e1)
+            try:
+               print('Searching from https://www.javbus.com/search/' + number)
+               new_pattern = re.compile(number + '_20\d{2}-\d{2}-\d{2}', flags = re.I)
+               search_query = get_html('https://www.javbus.com/search/' + number + '&type=&parent=ce')
+               new_number = re.findall(new_pattern, search_query)
+               if len(new_number)>0:
+                   print(new_number)
+                   k = input('choose which film to scrap:')
+                   return main(new_number[int(k)])
+               else:
+                   raise Exception('no results for censored file')
+            except Exception as e2:
+                print(e2)
+                print('Searching for the uncensored site')
+                return main_uncensored(number)
     except:
         data = {
             "title": "",

@@ -37,15 +37,19 @@ def get_number(filepath: str) -> str:
         return 'FC2-' + digits
 
     file_number = re.search(r'\w+-?\d{2,6}', filename).group().replace('-','')
-    digits = re.search(r'[0-9]+$', file_number).group()
-    letters = file_number[0:len(file_number)-len(digits)]
+    if re.search('^T28', file_number, re.I):
+        digits = file_number[3:]
+        letters = 'T28'
+    else:
+        digits = re.search(r'[0-9]+$', file_number).group()
+        letters = file_number[0:len(file_number)-len(digits)]
 
     if (len(letters)>0) & (len(digits)>0):
         return  letters + '-' + digits
     elif re.search('^\d{9}$', file_number):
-        return file_number[0:6] + '-' + file_number[6:9]
+        return file_number[0:6] + '_' + file_number[6:9]
     elif re.search('^\d{8}$', file_number):
-        return file_number[0:6] + '-' + file_number[6:8]
+        return file_number[0:6] + '_' + file_number[6:8]
     else:
         return None
 

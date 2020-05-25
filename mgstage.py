@@ -100,7 +100,7 @@ def main(number2):
         'tag': getTag(a),
         'label':getLabel(a),
         'year': getYear(getRelease(a)),  # str(re.search('\d{4}',getRelease(a)).group()),
-        'actor_photo': '',
+        'actor_photo': {},
         'website':'https://www.mgstage.com/product/product_detail/'+str(number)+'/',
         'source': 'mgstage.py',
     }
